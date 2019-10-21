@@ -435,11 +435,16 @@ val xcodeBuild = Action<KonanTest> { test ->
                 StandardCopyOption.REPLACE_EXISTING)
     }
 
+    val sdk = when (test.project.testTarget) {
+        KonanTarget.IOS_ARM32, KonanTarget.IOS_ARM64 -> Xcode.current.iphoneosSdk
+        else -> error("Unsupported target: ${test.project.testTarget}")
+    }
+
     val out = ByteArrayOutputStream()
     // Build project.
     test.project.exec {
         it.workingDir = xcProject.toFile()
-        it.commandLine("/usr/bin/xcrun", "xcodebuild",
+        it.commandLine("/usr/bin/xcrun", "-sdk", sdk, "xcodebuild",
                 "-workspace", "KonanTestLauncher.xcodeproj/project.xcworkspace",
                 "-scheme", "KonanTestLauncher",
                 "-destination", "generic/platform=iOS",
@@ -450,17 +455,12 @@ val xcodeBuild = Action<KonanTest> { test ->
     out.reset()
 
     // Create archive.
-    val sdk = when (test.project.testTarget) {
-        KonanTarget.IOS_ARM32, KonanTarget.IOS_ARM64 -> Xcode.current.iphoneosSdk
-        else -> error("Unsupported target: ${test.project.testTarget}")
-    }
     val archive = xcProject.resolve("build/KonanTestLauncher.xcarchive").toString()
     test.project.exec {
         it.workingDir = xcProject.toFile()
-        it.commandLine("/usr/bin/xcrun", "xcodebuild",
+        it.commandLine("/usr/bin/xcrun",  "-sdk", sdk, "xcodebuild",
                 "-workspace", "KonanTestLauncher.xcodeproj/project.xcworkspace",
                 "-scheme", "KonanTestLauncher",
-                "-sdk", sdk,
                 "archive", "-archivePath", archive)
         it.standardOutput = out
     }.assertNormalExitValue()
@@ -470,7 +470,7 @@ val xcodeBuild = Action<KonanTest> { test ->
     // Export to .IPA
     test.project.exec {
         it.workingDir = xcProject.toFile()
-        it.commandLine("/usr/bin/xcrun", "xcodebuild",
+        it.commandLine("/usr/bin/xcrun", "-sdk", sdk, "xcodebuild",
                 "-exportArchive", "-archivePath", archive,
                 "-exportOptionsPlist", "KonanTestLauncher/Info.plist",
                 "-exportPath", xcProject.resolve("build").toString())
