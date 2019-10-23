@@ -343,6 +343,7 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
             execSpec.args = commands + "-o" +
                     ("process launch" + execSpec.args.takeUnless { it.isEmpty() }?.let { " -- ${it.joinToString(" ")}" })
         }
+        uninstall(udid, "org.jetbrains.kotlin.KonanTestLauncher")
         kill()
         return result
     }
@@ -353,6 +354,7 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
 
     private fun getTargetUDID(): String {
         val out = ByteArrayOutputStream()
+        // FIXME: It seems that idb can't launch idb_companion from the first invoke
         for (i in 0..1) {
             project.exec {
                 it.commandLine(idb, "list-targets", "--json")
@@ -391,6 +393,20 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
         }
         println(out.toString())
         check(result.exitValue == 0) { "Installation of $bundlePath failed: $out" }
+    }
+
+    private fun uninstall(udid: String, bundleId: String) {
+        val out = ByteArrayOutputStream()
+
+        val result = project.exec {
+            it.workingDir = xcProject.toFile()
+            it.commandLine(idb, "uninstall", "--udid", udid, bundleId)
+            it.standardOutput = out
+            it.errorOutput = out
+            it.isIgnoreExitValue = true
+        }
+        println(out.toString())
+        check(result.exitValue == 0) { "Uninstall of $bundleId failed: $out" }
     }
 
     private fun startDebugServer(udid: String, bundleId: String): String {
