@@ -341,11 +341,11 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
             action.execute(execSpec)
             execSpec.executable = "lldb"
             execSpec.args = commands + "-b" + "-o" + "command script import ${pythonScript()}" +
+                    "-o" + ("process launch" +
+                        execSpec.args.takeUnless { it.isEmpty() }?.let { " -- ${it.joinToString(" ")}" }) +
                     "-o" + "get_exit_code" +
                     "-k" + "get_exit_code" +
-                    "-k" + "exit -1" +
-                    "-o" + ("process launch" +
-                        execSpec.args.takeUnless { it.isEmpty() }?.let { " -- ${it.joinToString(" ")}" })
+                    "-k" + "exit -1"
         }
         uninstall(udid, "org.jetbrains.kotlin.KonanTestLauncher")
         kill()
@@ -379,7 +379,8 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
     private fun getTargetUDID(): String {
         val out = ByteArrayOutputStream()
         // FIXME: It seems that idb can't launch idb_companion from the first invoke
-        for (i in 0..1) {
+        // probably the companion should be started and connected before
+        for (i in 0..3) {
             project.exec {
                 it.commandLine(idb, "list-targets", "--json")
                 it.standardOutput = out
@@ -389,12 +390,7 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
         return out.toString().run {
             check(isNotEmpty())
             @Serializable
-            data class DeviceTarget(
-                    val name: String,
-                    val udid: String,
-                    val state: String,
-                    val type: String
-            )
+            data class DeviceTarget(val name: String, val udid: String, val state: String, val type: String)
             split("\n")
                     .filter { it.isNotEmpty() }
                     .map { Json(strictMode = false).parse(DeviceTarget.serializer(), it) }
@@ -410,7 +406,7 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
 
         val result = project.exec {
             it.workingDir = xcProject.toFile()
-            it.commandLine(idb, "install", "--udid", udid, bundlePath)
+            it.commandLine = listOf(idb, "install", "--udid", udid, bundlePath)
             it.standardOutput = out
             it.errorOutput = out
             it.isIgnoreExitValue = true
@@ -424,7 +420,7 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
 
         val result = project.exec {
             it.workingDir = xcProject.toFile()
-            it.commandLine(idb, "uninstall", "--udid", udid, bundleId)
+            it.commandLine = listOf(idb, "uninstall", "--udid", udid, bundleId)
             it.standardOutput = out
             it.errorOutput = out
             it.isIgnoreExitValue = true
@@ -438,7 +434,7 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
 
         val result = project.exec {
             it.workingDir = xcProject.toFile()
-            it.commandLine(idb, "debugserver", "start", "--udid", udid, bundleId)
+            it.commandLine = listOf(idb, "debugserver", "start", "--udid", udid, bundleId)
             it.standardOutput = out
             it.errorOutput = out
         }
@@ -480,41 +476,27 @@ val xcodeBuild = Action<KonanTest> { test ->
         else -> error("Unsupported target: ${test.project.testTarget}")
     }
 
-    val out = ByteArrayOutputStream()
+    fun xcodebuild(vararg elements: String) {
+        val xcode = listOf("/usr/bin/xcrun", "-sdk", sdk, "xcodebuild")
+        val out = ByteArrayOutputStream()
+        test.project.exec {
+            it.workingDir = xcProject.toFile()
+            it.commandLine = xcode + elements.toList()
+            it.standardOutput = out
+        }.assertNormalExitValue()
+        println(out.toString("UTF-8"))
+    }
+
     // Build project.
-    test.project.exec {
-        it.workingDir = xcProject.toFile()
-        it.commandLine("/usr/bin/xcrun", "-sdk", sdk, "xcodebuild",
-                "-workspace", "KonanTestLauncher.xcodeproj/project.xcworkspace",
-                "-scheme", "KonanTestLauncher",
-                "-destination", "generic/platform=iOS",
-                "build")
-        it.standardOutput = out
-    }.assertNormalExitValue()
-    println(out.toString("UTF-8"))
-    out.reset()
+    xcodebuild("-workspace", "KonanTestLauncher.xcodeproj/project.xcworkspace",
+            "-scheme", "KonanTestLauncher", "-destination", "generic/platform=iOS", "build")
 
     // Create archive.
     val archive = xcProject.resolve("build/KonanTestLauncher.xcarchive").toString()
-    test.project.exec {
-        it.workingDir = xcProject.toFile()
-        it.commandLine("/usr/bin/xcrun",  "-sdk", sdk, "xcodebuild",
-                "-workspace", "KonanTestLauncher.xcodeproj/project.xcworkspace",
-                "-scheme", "KonanTestLauncher",
-                "archive", "-archivePath", archive)
-        it.standardOutput = out
-    }.assertNormalExitValue()
-    println(out.toString("UTF-8"))
-    out.reset()
+    xcodebuild("-workspace", "KonanTestLauncher.xcodeproj/project.xcworkspace",
+            "-scheme", "KonanTestLauncher", "archive", "-archivePath", archive)
 
     // Export to .IPA
-    test.project.exec {
-        it.workingDir = xcProject.toFile()
-        it.commandLine("/usr/bin/xcrun", "-sdk", sdk, "xcodebuild",
-                "-exportArchive", "-archivePath", archive,
-                "-exportOptionsPlist", "KonanTestLauncher/Info.plist",
-                "-exportPath", xcProject.resolve("build").toString())
-        it.standardOutput = out
-    }.assertNormalExitValue()
-    out.toString("UTF-8")
+    xcodebuild("-exportArchive", "-archivePath", archive, "-exportOptionsPlist", "KonanTestLauncher/Info.plist",
+            "-exportPath", xcProject.resolve("build").toString())
 }
