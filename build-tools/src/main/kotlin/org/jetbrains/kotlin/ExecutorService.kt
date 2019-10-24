@@ -426,7 +426,6 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
             it.isIgnoreExitValue = true
         }
         println(out.toString())
-        check(result.exitValue == 0) { "Uninstall of $bundleId failed: $out" }
     }
 
     private fun startDebugServer(udid: String, bundleId: String): String {
