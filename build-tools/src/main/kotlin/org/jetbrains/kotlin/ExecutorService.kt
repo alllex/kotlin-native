@@ -340,12 +340,36 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
         val result =  project.exec { execSpec: ExecSpec ->
             action.execute(execSpec)
             execSpec.executable = "lldb"
-            execSpec.args = commands + "-o" +
-                    ("process launch" + execSpec.args.takeUnless { it.isEmpty() }?.let { " -- ${it.joinToString(" ")}" })
+            execSpec.args = commands + "-b" + "-o" + "command script import ${pythonScript()}" +
+                    "-o" + "get_exit_code" +
+                    "-k" + "get_exit_code" +
+                    "-k" + "exit -1" +
+                    "-o" + ("process launch" +
+                        execSpec.args.takeUnless { it.isEmpty() }?.let { " -- ${it.joinToString(" ")}" })
         }
         uninstall(udid, "org.jetbrains.kotlin.KonanTestLauncher")
         kill()
         return result
+    }
+
+    private fun pythonScript(): String = xcProject.resolve("lldb_cmd.py").toFile().run {
+        writeText( // language=Python
+                """
+                    import lldb
+                          
+                    def exit_code(debugger, command, exe_ctx, result, internal_dict):
+                        process = exe_ctx.GetProcess()
+                        state = process.GetState()
+                        if state == lldb.eStateStopped:
+                            debugger.HandleCommand("bt all")
+                            process.Kill()
+                        code = process.GetExitStatus()
+                        debugger.HandleCommand("exit %d" % code)
+                    
+                    def __lldb_init_module(debugger, _):
+                        debugger.HandleCommand('command script add -f lldb_cmd.exit_code get_exit_code')
+                """.trimIndent())
+        absolutePath
     }
 
     private fun kill() = project.exec {
