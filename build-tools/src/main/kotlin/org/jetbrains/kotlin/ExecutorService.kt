@@ -28,10 +28,8 @@ import org.jetbrains.kotlin.konan.target.Architecture
 
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import org.jetbrains.kotlin.konan.target.Xcode
+import java.io.*
 
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -337,6 +335,8 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
                 .filter { it.isNotBlank() }
                 .flatMap { listOf("-o", it) }
 
+        var savedOut: OutputStream? = null
+        val out = ByteArrayOutputStream()
         val result =  project.exec { execSpec: ExecSpec ->
             action.execute(execSpec)
             execSpec.executable = "lldb"
@@ -346,7 +346,24 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
                     "-o" + "get_exit_code" +
                     "-k" + "get_exit_code" +
                     "-k" + "exit -1"
+            savedOut = execSpec.standardOutput
+            execSpec.standardOutput = out
         }
+        out.toString()
+                .also { if (project.verboseTest) println("STDOUT:\n$it") }
+                .split("\n")
+                .run { drop(indexOfFirst { s -> s.startsWith("(lldb) process launch") }) }
+                .filter {
+                    it.startsWith("(lldb)") ||
+                            it.matches("Process [0-9]* exited with status .*".toRegex()) ||
+                            it.matches("Process [0-9]* launched.* ".toRegex())
+                }
+                .flatMap { it.toByteArray().toList() }
+                .toTypedArray()
+                .also {
+                    savedOut?.write(it.toByteArray())
+                }
+
         uninstall(udid, "org.jetbrains.kotlin.KonanTestLauncher")
         kill()
         return result
@@ -418,7 +435,7 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
     private fun uninstall(udid: String, bundleId: String) {
         val out = ByteArrayOutputStream()
 
-        val result = project.exec {
+        project.exec {
             it.workingDir = xcProject.toFile()
             it.commandLine = listOf(idb, "uninstall", "--udid", udid, bundleId)
             it.standardOutput = out

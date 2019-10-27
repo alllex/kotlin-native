@@ -4017,7 +4017,7 @@ if (PlatformInfo.getTarget(project).name == "ios_arm64") {
         }
     }
     project.tasks
-            .matching { it instanceof KonanGTest || it instanceof FrameworkTest }
+            .matching { it instanceof KonanGTest || it instanceof KonanTest }
             .forEach {
                 it.dependsOn(t)
                 it.doFirst(ExecutorServiceKt.xcodeBuild)
