@@ -365,7 +365,6 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
                 }
 
         uninstall(udid, "org.jetbrains.kotlin.KonanTestLauncher")
-        kill()
         return result
     }
 
