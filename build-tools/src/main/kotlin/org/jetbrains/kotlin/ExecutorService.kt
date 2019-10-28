@@ -21,6 +21,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.gradle.api.Action
 import org.gradle.api.Project
+import org.gradle.api.tasks.Copy
 import org.gradle.process.ExecResult
 import org.gradle.process.ExecSpec
 import org.gradle.util.ConfigureUtil
@@ -342,8 +343,10 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
             execSpec.executable = "lldb"
             execSpec.args = commands + "-b" + "-o" + "command script import ${pythonScript()}" +
                     "-o" + ("process launch" +
-                        execSpec.args.takeUnless { it.isEmpty() }?.let { " -- ${it.joinToString(" ")}" }) +
-                    "-o" + "get_exit_code" +
+                        (execSpec.args.takeUnless { it.isEmpty() }
+                                ?.let { " -- ${it.joinToString(" ")}" }
+                                ?: "")) +
+                    "-o" + "get_exit_code"
                     "-k" + "get_exit_code" +
                     "-k" + "exit -1"
             savedOut = execSpec.standardOutput
@@ -352,14 +355,14 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
         out.toString()
                 .also { if (project.verboseTest) println("STDOUT:\n$it") }
                 .split("\n")
-                .run { drop(indexOfFirst { s -> s.startsWith("(lldb) process launch") }) }
-                .filter {
-                    it.startsWith("(lldb)") ||
-                            it.matches("Process [0-9]* exited with status .*".toRegex()) ||
-                            it.matches("Process [0-9]* launched.* ".toRegex())
+                .run { drop(indexOfFirst { s -> s.startsWith("(lldb) process launch") } + 1) }
+                .run {
+                    dropLast(size - 1 -
+                            indexOfFirst { it.matches(".*Process [0-9]* exited with status .*".toRegex()) })
+                }.joinToString("\n") {
+                    it.replace("Process [0-9]* exited with status .*".toRegex(), "")
+                            .replace("\r", "")   // TODO: investigate: where does the \r comes from
                 }
-                .flatMap { it.toByteArray().toList() }
-                .toTypedArray()
                 .also {
                     savedOut?.write(it.toByteArray())
                 }
@@ -456,6 +459,11 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
         check(result.exitValue == 0) { "Failed to start debug server: $out" }
         return out.toString()
     }
+}
+
+fun prepareLauncher(project: Project): Copy = project.tasks.create("prepareLauncher", Copy::class.java).apply {
+    from(project.file("iosLauncher"))
+    into(Paths.get(project.testOutputRoot, "launcher"))
 }
 
 val xcodeBuild = Action<KonanTest> { test ->
