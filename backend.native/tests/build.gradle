@@ -4013,4 +4013,10 @@ if (PlatformInfo.getTarget(project) == KonanTarget.IOS_ARM64.INSTANCE) {
                 it.dependsOn(prepare)
                 it.doFirst(ExecutorServiceKt.xcodeBuild)
             }
+    // Exclude tasks that can not be run on device
+    project.tasks
+            .matching { (it instanceof KonanLocalTest && ((KonanLocalTest) it).testData != null) ||
+                    it instanceof KonanDriverTest
+            }
+            .forEach { it.enabled = false }
 }
