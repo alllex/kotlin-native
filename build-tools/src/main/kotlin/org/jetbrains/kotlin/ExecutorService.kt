@@ -512,7 +512,7 @@ val xcodeBuild = Action<KonanTest> { test ->
 
     // Build project.
     xcodebuild("-workspace", "KonanTestLauncher.xcodeproj/project.xcworkspace",
-            "-scheme", "KonanTestLauncher", "-destination", "generic/platform=iOS", "build")
+            "-scheme", "KonanTestLauncher", "-allowProvisioningUpdates", "-destination", "generic/platform=iOS", "build")
 
     // Create archive.
     val archive = xcProject.resolve("build/KonanTestLauncher.xcarchive").toString()
