@@ -328,7 +328,7 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
 
     override fun execute(action: Action<in ExecSpec>): ExecResult? {
         kill()
-        val udid = getTargetUDID()
+        val udid = targetUDID()
         println("Found device UDID: $udid")
         install(udid, "build/KonanTestLauncher.ipa")
         val commands = startDebugServer(udid, "org.jetbrains.kotlin.KonanTestLauncher")
@@ -395,7 +395,7 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
         it.commandLine(idb, "kill")
     }
 
-    private fun getTargetUDID(): String {
+    private fun targetUDID(): String {
         val out = ByteArrayOutputStream()
         // FIXME: It seems that idb can't launch idb_companion from the first invoke
         // probably the companion should be started and connected before
