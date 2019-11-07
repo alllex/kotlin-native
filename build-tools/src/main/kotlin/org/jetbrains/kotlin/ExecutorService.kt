@@ -353,7 +353,7 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
             execSpec.standardOutput = out
         }
         out.toString()
-                .also { if (project.verboseTest) println("STDOUT:\n$it") }
+                .also { if (project.verboseTest) println(it) }
                 .split("\n")
                 .run { drop(indexOfFirst { s -> s.startsWith("(lldb) process launch") } + 1) }
                 .run {
@@ -466,60 +466,51 @@ fun prepareLauncher(project: Project): Copy = project.tasks.create("prepareLaunc
     into(Paths.get(project.testOutputRoot, "launcher"))
 }
 
-val xcodeBuild = Action<KonanTest> { test ->
-    val signIdentity = test.project.findProperty("sign_identity") as? String ?: "iPhone Developer"
-    val developmentTeam = test.project.findProperty("development_team") as? String
-
-    val xcProject = Paths.get(test.project.testOutputRoot, "launcher")
-
-    // Set correct signing
-    xcProject.resolve("KonanTestLauncher.xcodeproj/project.pbxproj")
-            .toFile().apply {
-                val text = readLines().joinToString("\n") {
-                    when {
-                        it.contains("CODE_SIGN_IDENTITY") ->
-                            it.replaceAfter("= ", "\"$signIdentity\";")
-                        it.contains("DEVELOPMENT_TEAM") || it.contains("DevelopmentTeam") ->
-                            it.replaceAfter("= ", "$developmentTeam;")
-                        else -> it
+fun KonanTestExecutable.xcodeBuild() {
+    this.doBeforeRun = Action {
+        val signIdentity = project.findProperty("sign_identity") as? String ?: "iPhone Developer"
+        val developmentTeam = project.findProperty("development_team") as? String
+        val xcProject = Paths.get(project.testOutputRoot, "launcher")
+        xcProject.resolve("KonanTestLauncher.xcodeproj/project.pbxproj")
+                .toFile().apply {
+                    val text = readLines().joinToString("\n") {
+                        when {
+                            it.contains("CODE_SIGN_IDENTITY") ->
+                                it.replaceAfter("= ", "\"$signIdentity\";")
+                            it.contains("DEVELOPMENT_TEAM") || it.contains("DevelopmentTeam") ->
+                                it.replaceAfter("= ", "$developmentTeam;")
+                            else -> it
+                        }
                     }
+                    writeText(text)
                 }
-                writeText(text)
-            }
+        xcProject.resolve("KonanTestLauncher/build/").let {
+            Files.createDirectories(it)
+            Files.copy(project.file(executable).toPath(), it.resolve("KonanTestLauncher.kexe"),
+                    StandardCopyOption.REPLACE_EXISTING)
+        }
+        val sdk = when (project.testTarget) {
+            KonanTarget.IOS_ARM32, KonanTarget.IOS_ARM64 -> Xcode.current.iphoneosSdk
+            else -> error("Unsupported target: ${project.testTarget}")
+        }
 
-    // Copy binary to the project dir from where it will be taken be the script step.
-    xcProject.resolve("KonanTestLauncher/build/").apply {
-        Files.createDirectories(this)
-        Files.copy(test.project.file(test.executable).toPath(), this.resolve("KonanTestLauncher.kexe"),
-                StandardCopyOption.REPLACE_EXISTING)
+        fun xcodebuild(vararg elements: String) {
+            val xcode = listOf("/usr/bin/xcrun", "-sdk", sdk, "xcodebuild")
+            val out = ByteArrayOutputStream()
+            project.exec {
+                it.workingDir = xcProject.toFile()
+                it.commandLine = xcode + elements.toList()
+                it.standardOutput = out
+            }.assertNormalExitValue()
+            println(out.toString("UTF-8"))
+        }
+        xcodebuild("-workspace", "KonanTestLauncher.xcodeproj/project.xcworkspace",
+                "-scheme", "KonanTestLauncher", "-allowProvisioningUpdates", "-destination",
+                "generic/platform=iOS", "build")
+        val archive = xcProject.resolve("build/KonanTestLauncher.xcarchive").toString()
+        xcodebuild("-workspace", "KonanTestLauncher.xcodeproj/project.xcworkspace",
+                "-scheme", "KonanTestLauncher", "archive", "-archivePath", archive)
+        xcodebuild("-exportArchive", "-archivePath", archive, "-exportOptionsPlist", "KonanTestLauncher/Info.plist",
+                "-exportPath", xcProject.resolve("build").toString())
     }
-
-    val sdk = when (test.project.testTarget) {
-        KonanTarget.IOS_ARM32, KonanTarget.IOS_ARM64 -> Xcode.current.iphoneosSdk
-        else -> error("Unsupported target: ${test.project.testTarget}")
-    }
-
-    fun xcodebuild(vararg elements: String) {
-        val xcode = listOf("/usr/bin/xcrun", "-sdk", sdk, "xcodebuild")
-        val out = ByteArrayOutputStream()
-        test.project.exec {
-            it.workingDir = xcProject.toFile()
-            it.commandLine = xcode + elements.toList()
-            it.standardOutput = out
-        }.assertNormalExitValue()
-        println(out.toString("UTF-8"))
-    }
-
-    // Build project.
-    xcodebuild("-workspace", "KonanTestLauncher.xcodeproj/project.xcworkspace",
-            "-scheme", "KonanTestLauncher", "-allowProvisioningUpdates", "-destination", "generic/platform=iOS", "build")
-
-    // Create archive.
-    val archive = xcProject.resolve("build/KonanTestLauncher.xcarchive").toString()
-    xcodebuild("-workspace", "KonanTestLauncher.xcodeproj/project.xcworkspace",
-            "-scheme", "KonanTestLauncher", "archive", "-archivePath", archive)
-
-    // Export to .IPA
-    xcodebuild("-exportArchive", "-archivePath", archive, "-exportOptionsPlist", "KonanTestLauncher/Info.plist",
-            "-exportPath", xcProject.resolve("build").toString())
 }
