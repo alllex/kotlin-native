@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.backend.common.pop
 import org.jetbrains.kotlin.backend.common.push
 import org.jetbrains.kotlin.backend.konan.*
 import org.jetbrains.kotlin.backend.konan.descriptors.allOverriddenFunctions
+import org.jetbrains.kotlin.backend.konan.descriptors.isArray
 import org.jetbrains.kotlin.backend.konan.descriptors.target
 import org.jetbrains.kotlin.backend.konan.ir.*
 import org.jetbrains.kotlin.backend.konan.llvm.functionName
@@ -574,7 +575,7 @@ internal class ModuleDFGBuilder(val context: Context, val irModule: IrModuleFrag
                                 if (value.value == null)
                                     DataFlowIR.Node.Null
                                 else
-                                    DataFlowIR.Node.Const(symbolTable.mapType(value.type))
+                                    DataFlowIR.Node.SimpleConst(symbolTable.mapType(value.type), value.value!!)
 
                             is IrGetObjectValue -> DataFlowIR.Node.Singleton(
                                     symbolTable.mapType(value.type),

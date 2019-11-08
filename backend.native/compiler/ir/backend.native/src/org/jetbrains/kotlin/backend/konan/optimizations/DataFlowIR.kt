@@ -217,7 +217,9 @@ internal object DataFlowIR {
     sealed class Node {
         class Parameter(val index: Int) : Node()
 
-        class Const(val type: Type) : Node()
+        open class Const(val type: Type) : Node()
+
+        class SimpleConst<T : Any>(type: Type, val value: T) : Const(type)
 
         object Null : Node()
 
@@ -229,8 +231,8 @@ internal object DataFlowIR {
             : Call(callee, arguments, returnType, irCallSite)
 
         // TODO: It can be replaced with a pair(AllocInstance, constructor Call), remove.
-        class NewObject(constructor: FunctionSymbol, arguments: List<Edge>,
-                        val constructedType: Type, override val irCallSite: IrConstructorCall?)
+        open class NewObject(constructor: FunctionSymbol, arguments: List<Edge>,
+                             val constructedType: Type, override val irCallSite: IrConstructorCall?)
             : Call(constructor, arguments, constructedType, irCallSite)
 
         open class VirtualCall(callee: FunctionSymbol, arguments: List<Edge>,
@@ -506,7 +508,6 @@ internal object DataFlowIR {
             val isFinal = irClass.isFinal()
             val isAbstract = irClass.isAbstract()
             val name = irClass.fqNameForIrSerialization.asString()
-
             classMap[irClass]?.let { return it }
 
             val placeToClassTable = true

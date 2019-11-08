@@ -190,7 +190,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     val vars = VariableManager(this)
     private val basicBlockToLastLocation = mutableMapOf<LLVMBasicBlockRef, LocationInfoRange>()
 
-    private fun update(block:LLVMBasicBlockRef, startLocationInfo: LocationInfo?, endLocation: LocationInfo? = startLocationInfo) {
+    private fun update(block: LLVMBasicBlockRef, startLocationInfo: LocationInfo?, endLocation: LocationInfo? = startLocationInfo) {
         startLocationInfo ?: return
         basicBlockToLastLocation.put(block, LocationInfoRange(startLocationInfo, endLocation))
     }
@@ -205,13 +205,13 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             (LLVMStoreSizeOfType(llvmTargetData, runtime.frameOverlayType) / runtime.pointerSize).toInt()
     private var slotCount = frameOverlaySlotCount
     private var localAllocs = 0
-    private var arenaSlot: LLVMValueRef? = null
-    private val slotToVariableLocation = mutableMapOf<Int,VariableDebugLocation>()
+    //private var arenaSlot: LLVMValueRef? = null
+    private val slotToVariableLocation = mutableMapOf<Int, VariableDebugLocation>()
 
-    private val prologueBb        = basicBlockInFunction("prologue", startLocation)
-    private val localsInitBb      = basicBlockInFunction("locals_init", startLocation)
-    private val entryBb           = basicBlockInFunction("entry", startLocation)
-    private val epilogueBb        = basicBlockInFunction("epilogue", endLocation)
+    private val prologueBb = basicBlockInFunction("prologue", startLocation)
+    private val localsInitBb = basicBlockInFunction("locals_init", startLocation)
+    private val entryBb = basicBlockInFunction("entry", startLocation)
+    private val epilogueBb = basicBlockInFunction("epilogue", endLocation)
     private val cleanupLandingpad = basicBlockInFunction("cleanup_landingpad", endLocation)
 
     /**
@@ -238,7 +238,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         return bb
     }
 
-    fun basicBlock(name:String = "label_", startLocationInfo:LocationInfo?, endLocationInfo: LocationInfo? = startLocationInfo): LLVMBasicBlockRef {
+    fun basicBlock(name: String = "label_", startLocationInfo: LocationInfo?, endLocationInfo: LocationInfo? = startLocationInfo): LLVMBasicBlockRef {
         val result = LLVMInsertBasicBlockInContext(llvmContext, this.currentBlock, name)!!
         update(result, startLocationInfo, endLocationInfo)
         LLVMMoveBasicBlockAfter(result, this.currentBlock)
@@ -261,13 +261,13 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             val slotAddress = LLVMBuildAlloca(builder, type, name)!!
             variableLocation?.let {
                 DIInsertDeclaration(
-                        builder       = codegen.context.debugInfo.builder,
-                        value         = slotAddress,
+                        builder = codegen.context.debugInfo.builder,
+                        value = slotAddress,
                         localVariable = it.localVariable,
-                        location      = it.location,
-                        bb            = prologueBb,
-                        expr          = null,
-                        exprCount     = 0)
+                        location = it.location,
+                        bb = prologueBb,
+                        expr = null,
+                        exprCount = 0)
             }
             return slotAddress
         }
@@ -327,7 +327,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
 
     fun freeze(value: LLVMValueRef, exceptionHandler: ExceptionHandler) {
         if (isObjectRef(value))
-            call(context.llvm.freezeSubgraph, listOf(value),  Lifetime.IRRELEVANT, exceptionHandler)
+            call(context.llvm.freezeSubgraph, listOf(value), Lifetime.IRRELEVANT, exceptionHandler)
     }
 
     fun checkMainThread(exceptionHandler: ExceptionHandler) {
@@ -368,7 +368,10 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             val resultSlot = when (resultLifetime.slotType) {
                 SlotType.ARENA -> {
                     localAllocs++
-                    arenaSlot!!
+                    val type = LLVMGetReturnType(LLVMGetElementType(llvmFunction.type))!!
+                    val stackPointer = alloca(type)
+                    stackPointer
+                    //arenaSlot!!
                 }
 
                 SlotType.RETURN -> returnSlot!!
@@ -385,7 +388,7 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
     private fun callRaw(llvmFunction: LLVMValueRef, args: List<LLVMValueRef>,
                         exceptionHandler: ExceptionHandler): LLVMValueRef {
         val rargs = args.toCValues()
-        if (LLVMIsAFunction(llvmFunction) != null /* the function declaration */  &&
+        if (LLVMIsAFunction(llvmFunction) != null /* the function declaration */ &&
                 isFunctionNoUnwind(llvmFunction)) {
             return LLVMBuildCall(builder, llvmFunction, rargs, args.size, "")!!
         } else {
@@ -439,13 +442,44 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
             call(context.llvm.allocInstanceFunction, listOf(typeInfo), lifetime)
 
     fun allocInstance(irClass: IrClass, lifetime: Lifetime): LLVMValueRef =
-            allocInstance(codegen.typeInfoForAllocation(irClass), lifetime)
+            if (lifetime == Lifetime.LOCAL) {
+                val stackSlot = alloca(context.llvmDeclarations.forClass(irClass).bodyType)
+                //bitcast(kObjHeaderPtr, stackSlot)
+                structGep(stackSlot, 0)
+            }
+            else
+                allocInstance(codegen.typeInfoForAllocation(irClass), lifetime)
 
-    fun allocArray(typeInfo: LLVMValueRef,
+    private val arrayClasses = mapOf(
+            "kotlin.ByteArray"          to int8Type,
+            "kotlin.CharArray"          to int16Type,
+            "kotlin.ShortArray"         to int16Type,
+            "kotlin.IntArray"           to int32Type,
+            "kotlin.LongArray"          to int64Type,
+            "kotlin.FloatArray"         to floatType,
+            "kotlin.DoubleArray"        to doubleType,
+            "kotlin.BooleanArray"       to int8Type
+    )
+
+    fun allocArray(irClass: IrClass,
                    count: LLVMValueRef,
                    lifetime: Lifetime,
                    exceptionHandler: ExceptionHandler): LLVMValueRef =
-            call(context.llvm.allocArrayFunction, listOf(typeInfo, count), lifetime, exceptionHandler)
+            if (lifetime == Lifetime.LOCAL) {
+                val className = irClass.fqNameForIrSerialization.asString()
+                assert(className in arrayClasses)
+                allocArrayOnStack(context.llvmDeclarations.forClass(irClass).bodyType, arrayClasses[className]!!, count)
+            }  else
+                call(context.llvm.allocArrayFunction, listOf(codegen.typeInfoValue(irClass), count),
+                        lifetime, exceptionHandler)
+
+    fun allocArrayOnStack(constructedType: LLVMTypeRef, elementType: LLVMTypeRef, count: LLVMValueRef): LLVMValueRef {
+        appendingTo(prologueBb) {
+            LLVMBuildArrayAlloca(builder, elementType, count, "")!!
+        }
+        val stackSlot = alloca(constructedType)
+        return structGep(stackSlot, 0)
+    }
 
     fun unreachable(): LLVMValueRef? {
         if (context.config.debug) {
@@ -973,8 +1007,8 @@ internal class FunctionGenerationContext(val function: LLVMValueRef,
         positionAtEnd(localsInitBb)
         slotsPhi = phi(kObjHeaderPtrPtr)
         // Is removed by DCE trivially, if not needed.
-        arenaSlot = intToPtr(
-                or(ptrToInt(slotsPhi, codegen.intPtrType), codegen.immOneIntPtrType), kObjHeaderPtrPtr)
+        /*arenaSlot = intToPtr(
+                or(ptrToInt(slotsPhi, codegen.intPtrType), codegen.immOneIntPtrType), kObjHeaderPtrPtr)*/
         positionAtEnd(entryBb)
     }
 
