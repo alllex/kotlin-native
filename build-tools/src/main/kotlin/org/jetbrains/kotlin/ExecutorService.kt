@@ -98,9 +98,7 @@ fun create(project: Project): ExecutorService {
 
         else -> {
             if (project.hasProperty("remote")) sshExecutor(project)
-            else object : ExecutorService {
-                override fun execute(action: Action<in ExecSpec>): ExecResult? = project.exec(action)
-            }
+            else localExecutorService(project)
         }
     }
 }
@@ -213,6 +211,10 @@ fun Project.executeAndCheck(executable: Path, arguments: List<String> = emptyLis
  * @see Project.exec
  */
 fun localExecutor(project: Project) = { a: Action<in ExecSpec> -> project.exec(a) }
+
+fun localExecutorService(project: Project): ExecutorService = object : ExecutorService {
+    override fun execute(action: Action<in ExecSpec>): ExecResult? = project.exec(action)
+}
 
 /**
  * Executes a given action with iPhone Simulator.

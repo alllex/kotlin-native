@@ -108,7 +108,7 @@ open class FrameworkTest : DefaultTask(), KonanTestExecutable {
     @TaskAction
     fun run() {
         doBeforeRun?.execute(this)
-        runTest(Paths.get(executable))
+        runTest(executorService = project.executor, testExecutable = Paths.get(executable))
     }
 
     /**
@@ -159,11 +159,9 @@ open class FrameworkTest : DefaultTask(), KonanTestExecutable {
         )
     }
 
-    private fun runTest(testExecutable: Path, args: List<String> = emptyList()) {
-        val executor = (project.convention.plugins["executor"] as? ExecutorService)
-                ?: throw RuntimeException("Executor wasn't found")
+    private fun runTest(executorService: ExecutorService, testExecutable: Path, args: List<String> = emptyList()) {
         val (stdOut, stdErr, exitCode) = runProcess(
-                executor = executor.add(Action { it.environment = buildEnvironment() })::execute,
+                executor = executorService.add(Action { it.environment = buildEnvironment() })::execute,
                 executable = testExecutable.toString(),
                 args = args)
 
@@ -200,6 +198,7 @@ open class FrameworkTest : DefaultTask(), KonanTestExecutable {
             else -> error("Cannot validate bitcode for test target $testTarget")
         }
 
-        runTest(bitcodeBuildTool, args = listOf("--sdk", sdk, "-v", "-t", toolPath, frameworkBinary))
+        runTest(executorService = localExecutorService(project),
+                testExecutable = bitcodeBuildTool, args = listOf("--sdk", sdk, "-v", "-t", toolPath, frameworkBinary))
     }
 }
