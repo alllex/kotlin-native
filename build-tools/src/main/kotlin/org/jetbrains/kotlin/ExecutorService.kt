@@ -340,7 +340,7 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
 
         var savedOut: OutputStream? = null
         val out = ByteArrayOutputStream()
-        val result =  project.exec { execSpec: ExecSpec ->
+        val result = project.exec { execSpec: ExecSpec ->
             action.execute(execSpec)
             execSpec.executable = "lldb"
             execSpec.args = commands + "-b" + "-o" + "command script import ${pythonScript()}" +
@@ -406,7 +406,7 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
                 it.commandLine(idb, "list-targets", "--json")
                 it.standardOutput = out
             }.assertNormalExitValue()
-           if (out.toString().trim().isNotEmpty()) break
+            if (out.toString().trim().isNotEmpty()) break
         }
         return out.toString().run {
             check(isNotEmpty())
@@ -473,6 +473,25 @@ fun KonanTestExecutable.xcodeBuild() {
         val signIdentity = project.findProperty("sign_identity") as? String ?: "iPhone Developer"
         val developmentTeam = project.findProperty("development_team") as? String
         val xcProject = Paths.get(project.testOutputRoot, "launcher")
+
+        val shellScript: String = // language=Bash
+                ("""
+                    set -x
+                    cp "${'$'}PROJECT_DIR/KonanTestLauncher/build/${'$'}TARGET_NAME.kexe" "${'$'}TARGET_BUILD_DIR/${'$'}EXECUTABLE_PATH"
+                """.trimIndent() + when (this) {
+                    is FrameworkTest -> {
+                        val frameworkParentDirPath = "$testOutput/$testName/${project.testTarget.name}"
+                        frameworkNames.joinToString(
+                                separator = "\n",
+                                prefix = "\nmkdir -p \$TARGET_BUILD_DIR/\$FRAMEWORKS_FOLDER_PATH\n") { """
+                                    cp -r "$frameworkParentDirPath/$it.framework" "${"$"}TARGET_BUILD_DIR/${"$"}FRAMEWORKS_FOLDER_PATH/$it.framework"
+                                    install_name_tool -add_rpath "@executable_path/Frameworks" "${"$"}TARGET_BUILD_DIR/${"$"}EXECUTABLE_PATH"
+                                """.trimIndent()
+                        }
+                    }
+                    else -> ""
+                }).replace("\n", "\\n").replace("\"", "\\\"")
+
         xcProject.resolve("KonanTestLauncher.xcodeproj/project.pbxproj")
                 .toFile().apply {
                     val text = readLines().joinToString("\n") {
@@ -481,6 +500,8 @@ fun KonanTestExecutable.xcodeBuild() {
                                 it.replaceAfter("= ", "\"$signIdentity\";")
                             it.contains("DEVELOPMENT_TEAM") || it.contains("DevelopmentTeam") ->
                                 it.replaceAfter("= ", "$developmentTeam;")
+                            it.contains("shellScript = ") ->
+                                it.replaceAfter("= ", "\"$shellScript\";")
                             else -> it
                         }
                     }
@@ -499,12 +520,13 @@ fun KonanTestExecutable.xcodeBuild() {
         fun xcodebuild(vararg elements: String) {
             val xcode = listOf("/usr/bin/xcrun", "-sdk", sdk, "xcodebuild")
             val out = ByteArrayOutputStream()
-            project.exec {
+            val result = project.exec {
                 it.workingDir = xcProject.toFile()
                 it.commandLine = xcode + elements.toList()
                 it.standardOutput = out
-            }.assertNormalExitValue()
+            }
             println(out.toString("UTF-8"))
+            result.assertNormalExitValue()
         }
         xcodebuild("-workspace", "KonanTestLauncher.xcodeproj/project.xcworkspace",
                 "-scheme", "KonanTestLauncher", "-allowProvisioningUpdates", "-destination",

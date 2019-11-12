@@ -35,7 +35,7 @@ open class FrameworkTest : DefaultTask(), KonanTestExecutable {
     @Input
     var fullBitcode: Boolean = false
 
-    private val testOutput: String = project.testOutputFramework
+    val testOutput: String = project.testOutputFramework
 
     override val executable: String
         get() {
