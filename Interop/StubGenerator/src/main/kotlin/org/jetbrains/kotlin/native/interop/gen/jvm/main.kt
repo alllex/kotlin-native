@@ -312,6 +312,7 @@ private fun processCLib(args: Array<String>, additionalArgs: Map<String, Any> = 
         is StubIrDriver.Result.Metadata -> {
             val moduleName = File(cinteropArguments.output).nameWithoutExtension
             val args = LibraryCreationArguments(
+                    metadata = stubIrOutput.metadata,
                     nativeBitcodePath = nativeOutputPath,
                     target = tool.target,
                     moduleName = moduleName,
