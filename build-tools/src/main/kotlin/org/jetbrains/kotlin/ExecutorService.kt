@@ -348,7 +348,7 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
                         (execSpec.args.takeUnless { it.isEmpty() }
                                 ?.let { " -- ${it.joinToString(" ")}" }
                                 ?: "")) +
-                    "-o" + "get_exit_code"
+                    "-o" + "get_exit_code" +
                     "-k" + "get_exit_code" +
                     "-k" + "exit -1"
             savedOut = execSpec.standardOutput
