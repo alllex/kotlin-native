@@ -218,6 +218,8 @@ private fun processCLib(args: Array<String>, additionalArgs: Map<String, Any> = 
 
     val (nativeIndex, compilation) = buildNativeIndex(library, verbose)
 
+    val moduleName = File(cinteropArguments.output).nameWithoutExtension
+
     // Our current approach to arm64_32 support is to compile armv7k version of bitcode
     // for arm64_32. That's the reason for this substitution.
     // TODO: Add proper support with the next LLVM update.
@@ -260,7 +262,7 @@ private fun processCLib(args: Array<String>, additionalArgs: Map<String, Any> = 
             file.parentFile.mkdirs()
             file
         }
-        val driverOptions = StubIrDriver.DriverOptions(mode, entryPoint, File(outCFile.absolutePath), outKtFileCreator)
+        val driverOptions = StubIrDriver.DriverOptions(mode, entryPoint, moduleName, File(outCFile.absolutePath), outKtFileCreator)
         val stubIrDriver = StubIrDriver(stubIrContext, driverOptions)
         stubIrDriver.run()
     }
@@ -273,7 +275,13 @@ private fun processCLib(args: Array<String>, additionalArgs: Map<String, Any> = 
             warn("The package value `$oldValue` specified in .def file is overridden with explicit $newValue")
     }
 
-    def.manifestAddendProperties["interop"] = "true"
+    when (stubIrOutput) {
+        StubIrDriver.Result.SourceCode ->
+            def.manifestAddendProperties["interop"] = "true"
+        is StubIrDriver.Result.Metadata ->
+            // TODO: use KLIB_INTEROP_IR_PROVIDER_IDENTIFIER
+            def.manifestAddendProperties["ir_provider"] = "kotlin.native.cinterop"
+    }
 
     stubIrContext.addManifestProperties(def.manifestAddendProperties)
 
@@ -310,7 +318,6 @@ private fun processCLib(args: Array<String>, additionalArgs: Map<String, Any> = 
             argsToCompiler(staticLibraries, libraryPaths)
         }
         is StubIrDriver.Result.Metadata -> {
-            val moduleName = File(cinteropArguments.output).nameWithoutExtension
             val args = LibraryCreationArguments(
                     metadata = stubIrOutput.metadata,
                     nativeBitcodePath = nativeOutputPath,

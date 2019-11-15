@@ -37,10 +37,19 @@ class StubIrContext(
                     }
     ).precompileHeaders()
 
+    // TODO: Used only for JVM.
     val jvmFileClassName = if (configuration.pkgName.isEmpty()) {
         libName
     } else {
         configuration.pkgName.substringAfterLast('.')
+    }
+
+    val validPackageName = configuration.pkgName.split(".").joinToString(".") {
+        if(it.matches(VALID_PACKAGE_NAME_REGEX)){
+            it
+        }else{
+            "`$it`"
+        }
     }
 
     private val anonymousStructKotlinNames = mutableMapOf<StructDecl, String>()
@@ -86,6 +95,10 @@ class StubIrContext(
 
         // TODO: consider exporting Objective-C class and protocol forward refs.
     }
+
+    companion object {
+        private val VALID_PACKAGE_NAME_REGEX = "[a-zA-Z0-9_.]+".toRegex()
+    }
 }
 
 class StubIrDriver(
@@ -95,6 +108,7 @@ class StubIrDriver(
     data class DriverOptions(
             val mode: GenerationMode,
             val entryPoint: String?,
+            val moduleName: String,
             val outCFile: File,
             val outKtFileCreator: () -> File
     )
@@ -106,7 +120,7 @@ class StubIrDriver(
     }
 
     fun run(): Result {
-        val (mode, entryPoint, outCFile, outKtFile) = options
+        val (mode, entryPoint, moduleName, outCFile, outKtFile) = options
 
         val builderResult = StubIrBuilder(context).build()
         val bridgeBuilderResult = StubIrBridgeBuilder(context, builderResult).build()
@@ -119,7 +133,7 @@ class StubIrDriver(
             GenerationMode.SOURCE_CODE -> {
                 emitSourceCode(outKtFile(), builderResult, bridgeBuilderResult)
             }
-            GenerationMode.METADATA -> emitMetadata(builderResult)
+            GenerationMode.METADATA -> emitMetadata(builderResult, moduleName)
         }
     }
 
@@ -132,9 +146,8 @@ class StubIrDriver(
         return Result.SourceCode
     }
 
-    private fun emitMetadata(builderResult: StubIrBuilderResult): Result.Metadata {
-        return Result.Metadata(KlibModuleMetadata("test", emptyList(), emptyList()))
-    }
+    private fun emitMetadata(builderResult: StubIrBuilderResult, moduleName: String) =
+            Result.Metadata(StubIrMetadataEmitter(context, builderResult, moduleName).emit())
 
     private fun emitCFile(context: StubIrContext, cFile: Appendable, entryPoint: String?, nativeBridges: NativeBridges) {
         val out = { it: String -> cFile.appendln(it) }
