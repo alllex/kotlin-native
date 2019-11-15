@@ -475,22 +475,24 @@ fun KonanTestExecutable.xcodeBuild() {
         val xcProject = Paths.get(project.testOutputRoot, "launcher")
 
         val shellScript: String = // language=Bash
-                ("""
-                    set -x
-                    cp "${'$'}PROJECT_DIR/KonanTestLauncher/build/${'$'}TARGET_NAME.kexe" "${'$'}TARGET_BUILD_DIR/${'$'}EXECUTABLE_PATH"
-                """.trimIndent() + when (this) {
-                    is FrameworkTest -> {
-                        val frameworkParentDirPath = "$testOutput/$testName/${project.testTarget.name}"
-                        frameworkNames.joinToString(
-                                separator = "\n",
-                                prefix = "\nmkdir -p \$TARGET_BUILD_DIR/\$FRAMEWORKS_FOLDER_PATH\n") { """
-                                    cp -r "$frameworkParentDirPath/$it.framework" "${"$"}TARGET_BUILD_DIR/${"$"}FRAMEWORKS_FOLDER_PATH/$it.framework"
-                                    install_name_tool -add_rpath "@executable_path/Frameworks" "${"$"}TARGET_BUILD_DIR/${"$"}EXECUTABLE_PATH"
-                                """.trimIndent()
+                mutableListOf("cp \"\$PROJECT_DIR/KonanTestLauncher/build/\$TARGET_NAME.kexe\" " +
+                        "\"\$TARGET_BUILD_DIR/\$EXECUTABLE_PATH\"").also {
+                    when (this) {
+                        is FrameworkTest -> {
+                            val frameworkParentDirPath = "$testOutput/$testName/${project.testTarget.name}"
+                            // Create a Frameworks folder inside the build dir.
+                            it += "mkdir -p \"\$TARGET_BUILD_DIR/\$FRAMEWORKS_FOLDER_PATH\""
+                            // Copy each framework to the Frameworks dir.
+                            it += frameworkNames.map { name ->
+                                "cp -r \"$frameworkParentDirPath/$name.framework\" " +
+                                        "\"\$TARGET_BUILD_DIR/\$FRAMEWORKS_FOLDER_PATH/$name.framework\""
+                            }
+                            // Add @rpath to the built executable to point to Frameworks directory
+                            it += "install_name_tool -add_rpath \"@executable_path/Frameworks\" " +
+                                    "\"\$TARGET_BUILD_DIR/\$EXECUTABLE_PATH\""
                         }
                     }
-                    else -> ""
-                }).replace("\n", "\\n").replace("\"", "\\\"")
+                }.joinToString(separator = "\\n") { it.replace("\"", "\\\"") }
 
         xcProject.resolve("KonanTestLauncher.xcodeproj/project.pbxproj")
                 .toFile().apply {
