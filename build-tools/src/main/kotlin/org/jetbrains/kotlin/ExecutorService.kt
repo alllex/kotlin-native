@@ -329,7 +329,6 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
     private val deviceName = project.findProperty("device_name") as? String
 
     override fun execute(action: Action<in ExecSpec>): ExecResult? {
-        kill()
         val udid = targetUDID()
         println("Found device UDID: $udid")
         install(udid, "build/KonanTestLauncher.ipa")
@@ -370,6 +369,7 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
                 }
 
         uninstall(udid, "org.jetbrains.kotlin.KonanTestLauncher")
+        kill()
         return result
     }
 
