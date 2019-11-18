@@ -3828,6 +3828,7 @@ if (isAppleTarget(project)) {
                     dependsOn ":${targetName}CrossDistRuntime", ':commonDistRuntime', ':distCompiler'
                 }
 
+                extraOpts "-Xembed-bitcode"
                 extraOpts project.globalTestArgs
             }
 
@@ -3840,6 +3841,7 @@ if (isAppleTarget(project)) {
                     dependsOn ":${targetName}CrossDistRuntime", ':commonDistRuntime', ':distCompiler'
                 }
 
+                extraOpts "-Xembed-bitcode"
                 extraOpts project.globalTestArgs
             }
         }
