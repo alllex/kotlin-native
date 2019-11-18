@@ -506,7 +506,7 @@ internal class CharClass(val ignoreCase: Boolean = false, negative: Boolean = fa
                         }
 
                         if (temp.length > 0)
-                            temp.deleteCharAt(temp.length - 1)
+                            temp.deleteAt(temp.length - 1)
 
                         return temp.toString()
                     }
@@ -529,7 +529,7 @@ internal class CharClass(val ignoreCase: Boolean = false, negative: Boolean = fa
         }
 
         if (temp.length > 0)
-            temp.deleteCharAt(temp.length - 1)
+            temp.deleteAt(temp.length - 1)
 
         return temp.toString()
     }
