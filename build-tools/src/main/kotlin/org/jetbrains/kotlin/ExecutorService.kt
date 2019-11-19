@@ -477,6 +477,13 @@ fun KonanTestExecutable.xcodeBuild() {
         val shellScript: String = // language=Bash
                 mutableListOf("cp \"\$PROJECT_DIR/KonanTestLauncher/build/\$TARGET_NAME.kexe\" " +
                         "\"\$TARGET_BUILD_DIR/\$EXECUTABLE_PATH\"").also {
+                    // copy dSYM if it exists
+                    it += """
+                        DSYM_DIR="${"$"}PROJECT_DIR/KonanTestLauncher/build/${"$"}TARGET_NAME.kexe.dSYM"
+                        if [ -d "${"$"}DSYM_DIR" ]; then
+                            cp -r "${"$"}DSYM_DIR" "${"$"}TARGET_BUILD_DIR/${"$"}EXECUTABLE_FOLDER_PATH/"
+                        fi
+                    """.trimIndent()
                     when (this) {
                         is FrameworkTest -> {
                             val frameworkParentDirPath = "$testOutput/$testName/${project.testTarget.name}"
@@ -495,7 +502,8 @@ fun KonanTestExecutable.xcodeBuild() {
                 }.joinToString(separator = "\\n") { it.replace("\"", "\\\"") }
 
         xcProject.resolve("KonanTestLauncher.xcodeproj/project.pbxproj")
-                .toFile().apply {
+                .toFile()
+                .apply {
                     val text = readLines().joinToString("\n") {
                         when {
                             it.contains("CODE_SIGN_IDENTITY") ->
@@ -509,10 +517,17 @@ fun KonanTestExecutable.xcodeBuild() {
                     }
                     writeText(text)
                 }
+
+        // Copy binary and dSYMs to the xcode project build dir.
         xcProject.resolve("KonanTestLauncher/build/").let {
             Files.createDirectories(it)
             Files.copy(project.file(executable).toPath(), it.resolve("KonanTestLauncher.kexe"),
                     StandardCopyOption.REPLACE_EXISTING)
+            it.resolve("KonanTestLauncher.kexe.dSYM")
+                    .toFile()
+                    .takeIf { f -> f.exists() }
+                    ?.let { file -> project.file("$executable.dSYM").copyRecursively(file, true) }
+
         }
         val sdk = when (project.testTarget) {
             KonanTarget.IOS_ARM32, KonanTarget.IOS_ARM64 -> Xcode.current.iphoneosSdk
