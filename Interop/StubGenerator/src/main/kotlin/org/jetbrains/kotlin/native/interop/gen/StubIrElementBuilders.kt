@@ -262,8 +262,10 @@ internal class EnumStubBuilder(
             val varTypeName = typeMirror.info.constructPointedType(typeMirror.valueType)
             val varTypeClassifier = typeMirror.pointedType.classifier
             val valueTypeClassifier = typeMirror.valueType.classifier
-            typealiases += TypealiasStub(varTypeClassifier, varTypeName.toStubIrType())
-            typealiases += TypealiasStub(valueTypeClassifier, baseKotlinType.toStubIrType())
+            // TODO: Is it correct to have the same uniqId for both type aliases?
+            val origin = StubOrigin.Enum(e)
+            typealiases += TypealiasStub(varTypeClassifier, varTypeName.toStubIrType(), origin)
+            typealiases += TypealiasStub(valueTypeClassifier, baseKotlinType.toStubIrType(), origin)
 
             kotlinType = typeMirror.valueType
             StubContainerMeta()
@@ -505,21 +507,21 @@ internal class TypedefStubBuilder(
     override fun build(): List<StubIrElement> {
         val mirror = context.mirror(Typedef(typedefDef))
         val baseMirror = context.mirror(typedefDef.aliased)
-
         val varType = mirror.pointedType.classifier
+        val origin = StubOrigin.TypeDef(typedefDef)
         return when (baseMirror) {
             is TypeMirror.ByValue -> {
                 val valueType = (mirror as TypeMirror.ByValue).valueType
                 val varTypeAliasee = mirror.info.constructPointedType(valueType)
                 val valueTypeAliasee = baseMirror.valueType
                 listOf(
-                        TypealiasStub(varType, varTypeAliasee.toStubIrType()),
-                        TypealiasStub(valueType.classifier, valueTypeAliasee.toStubIrType())
+                        TypealiasStub(varType, varTypeAliasee.toStubIrType(), origin),
+                        TypealiasStub(valueType.classifier, valueTypeAliasee.toStubIrType(), origin)
                 )
             }
             is TypeMirror.ByRef -> {
                 val varTypeAliasee = baseMirror.pointedType
-                listOf(TypealiasStub(varType, varTypeAliasee.toStubIrType()))
+                listOf(TypealiasStub(varType, varTypeAliasee.toStubIrType(), origin))
             }
         }
     }
