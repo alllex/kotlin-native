@@ -335,7 +335,7 @@ actual class StringBuilder private constructor (
      * @throws IndexOutOfBoundsException or [IllegalArgumentException] when [start] or [end] is out of range of the [csq] character sequence indices or when `start > end`.
      * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
      */
-    @Deprecated("Renamed to `insertRange`", ReplaceWith("insertRange(indexm csq, start, end)"), DeprecationLevel.WARNING)
+    @Deprecated("Renamed to `insertRange`", ReplaceWith("insertRange(index, csq, start, end)"), DeprecationLevel.WARNING)
     @UseExperimental(ExperimentalStdlibApi::class)
     fun insert(index: Int, csq: CharSequence?, start: Int, end: Int): StringBuilder = this.insertRange(index, csq, start, end)
 
