@@ -3708,7 +3708,7 @@ task library_ir_provider_mismatch(type: KonanDriverTest) {
 
     def currentTarget = project.target.name
 
-    doBefore {
+    doBeforeBuild {
         def konancScript = isWindows() ? "konanc.bat" : "konanc"
         def konanc = "$dist/bin/$konancScript"
         "$konanc $lib -p library -o $dir/supported_ir_provider/empty -target $currentTarget".execute().waitFor()
