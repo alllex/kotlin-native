@@ -472,7 +472,7 @@ fun KonanTestExecutable.xcodeBuild() {
                 mutableListOf("""
                         # Copy executable to the build dir.
                         cp "${"$"}PROJECT_DIR/KonanTestLauncher/build/${"$"}TARGET_NAME.kexe" \
-                            "${"$"}TARGET_BUILD_DIR/${"$"}EXECUTABLE_PATH"
+                        "${"$"}TARGET_BUILD_DIR/${"$"}EXECUTABLE_PATH"
                         # copy dSYM if it exists
                         DSYM_DIR="${"$"}PROJECT_DIR/KonanTestLauncher/build/${"$"}TARGET_NAME.kexe.dSYM"
                         if [ -d "${"$"}DSYM_DIR" ]; then
