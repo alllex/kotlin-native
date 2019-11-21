@@ -322,24 +322,6 @@ actual class StringBuilder private constructor (
     }
 
     /**
-     * Inserts characters in a subsequence of the specified character sequence [csq] into this string builder at the specified [index] and returns this instance.
-     *
-     * The inserted characters go in the same order as in the [csq] character sequence, starting at [index].
-     *
-     * @param index the position in this string builder to insert at.
-     * @param csq the character sequence from which a subsequence is inserted. If [csq] is `null`,
-     *  then characters will be inserted as if [csq] contained the four characters `"null"`.
-     * @param start the beginning (inclusive) of the subsequence to insert.
-     * @param end the end (exclusive) of the subsequence to insert.
-     *
-     * @throws IndexOutOfBoundsException or [IllegalArgumentException] when [start] or [end] is out of range of the [csq] character sequence indices or when `start > end`.
-     * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
-     */
-    @Deprecated("Renamed to `insertRange`", ReplaceWith("insertRange(index, csq, start, end)"), DeprecationLevel.WARNING)
-    @UseExperimental(ExperimentalStdlibApi::class)
-    fun insert(index: Int, csq: CharSequence?, start: Int, end: Int): StringBuilder = this.insertRange(index, csq, start, end)
-
-    /**
      * Inserts the string representation of the specified [obj] object into this string builder at the specified [index] and returns this instance.
      *
      * The overall effect is exactly as if the [obj] were converted to a string by the `obj.toString()` method,
@@ -418,15 +400,6 @@ actual class StringBuilder private constructor (
      *
      * @throws IndexOutOfBoundsException if [index] is out of bounds of this string builder.
      */
-    @Deprecated("Renamed to `set`", ReplaceWith("set(index, value)"), DeprecationLevel.WARNING)
-    @UseExperimental(ExperimentalStdlibApi::class)
-    fun setCharAt(index: Int, value: Char) = set(index, value)
-
-    /**
-     * Sets the character at the specified [index] to the specified [value].
-     *
-     * @throws IndexOutOfBoundsException if [index] is out of bounds of this string builder.
-     */
     @SinceKotlin("1.3")
     @ExperimentalStdlibApi
     operator fun set(index: Int, value: Char) {
@@ -455,19 +428,6 @@ actual class StringBuilder private constructor (
 
         return this
     }
-
-    /**
-     * Removes the character at the specified [index] from this string builder and returns this instance.
-     *
-     * If the `Char` at the specified [index] is part of a supplementary code point, this method does not remove the entire supplementary character.
-     *
-     * @param index the index of `Char` to remove.
-     *
-     * @throws IndexOutOfBoundsException if [index] is out of bounds of this string builder.
-     */
-    @Deprecated("Renamed to `deleteAt`", ReplaceWith("deleteAt(index)"), DeprecationLevel.WARNING)
-    @UseExperimental(ExperimentalStdlibApi::class)
-    fun deleteCharAt(index: Int) = deleteAt(index)
 
     /**
      * Removes the character at the specified [index] from this string builder and returns this instance.
@@ -808,3 +768,125 @@ public actual inline fun StringBuilder.insertRange(index: Int, chars: CharArray,
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public actual inline fun StringBuilder.insertRange(index: Int, csq: CharSequence?, startIndex: Int, endIndex: Int): StringBuilder =
         this.insertRange(index, csq, startIndex, endIndex)
+
+/**
+ * Appends the string representation of the specified boolean [it] to this string builder and returns this instance.
+ *
+ * The overall effect is exactly as if the boolean [it] were converted to a string by the `boolean.toString()` method,
+ * and then that string was appended to this string builder.
+ */
+@UseExperimental(ExperimentalStdlibApi::class)
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
+public inline fun StringBuilder.append(it: Boolean): StringBuilder = this.append(boolean = it)
+
+/**
+ * Appends the specified string [it] to this string builder and returns this instance.
+ */
+@UseExperimental(ExperimentalStdlibApi::class)
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
+public inline fun StringBuilder.append(it: String): StringBuilder = this.append(string = it)
+
+/**
+ * Appends characters in the specified [CharArray] [it] to this string builder and returns this instance.
+ *
+ * Characters are appended in order, starting at the index 0.
+ */
+@UseExperimental(ExperimentalStdlibApi::class)
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
+public inline fun StringBuilder.append(it: CharArray): StringBuilder = this.append(chars = it)
+
+/**
+ * Ensures that the capacity of this string builder is at least equal to the specified [capacity].
+ *
+ * If the current capacity is less than the specified [capacity], a new backing storage is allocated with greater capacity.
+ * Otherwise, this method takes no action and simply returns.
+ */
+@UseExperimental(ExperimentalStdlibApi::class)
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
+public inline fun StringBuilder.ensureCapacity(capacity: Int): Unit = this.ensureCapacity(minimumCapacity = capacity)
+
+/**
+ * Inserts the specified character char [c] into this string builder at the specified [index] and returns this instance.
+ *
+ * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
+ */
+@UseExperimental(ExperimentalStdlibApi::class)
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
+public inline fun StringBuilder.insert(index: Int, c: Char): StringBuilder = this.insert(index = index, char = c)
+
+/**
+ * Inserts the string representation of the specified boolean [value] into this string builder at the specified [index] and returns this instance.
+ *
+ * The overall effect is exactly as if the boolean [value] were converted to a string by the `value.toString()` method,
+ * and then that string was inserted into this string builder at the specified [index].
+ *
+ * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
+ */
+@UseExperimental(ExperimentalStdlibApi::class)
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
+public inline fun StringBuilder.insert(index: Int, value: Boolean): StringBuilder = this.insert(index = index, boolean = value)
+
+/**
+ * Inserts characters in a subsequence of the specified character sequence [csq] into this string builder at the specified [index] and returns this instance.
+ *
+ * The inserted characters go in the same order as in the [csq] character sequence, starting at [index].
+ *
+ * @param index the position in this string builder to insert at.
+ * @param csq the character sequence from which a subsequence is inserted. If [csq] is `null`,
+ *  then characters will be inserted as if [csq] contained the four characters `"null"`.
+ * @param start the beginning (inclusive) of the subsequence to insert.
+ * @param end the end (exclusive) of the subsequence to insert.
+ *
+ * @throws IndexOutOfBoundsException or [IllegalArgumentException] when [start] or [end] is out of range of the [csq] character sequence indices or when `start > end`.
+ * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
+ */
+@UseExperimental(ExperimentalStdlibApi::class)
+public inline fun StringBuilder.insert(index: Int, csq: CharSequence?, start: Int, end: Int): StringBuilder =
+        this.insertRange(index, csq, start, end)
+
+/**
+ * Inserts the string representation of the specified [value] object into this string builder at the specified [index] and returns this instance.
+ *
+ * The overall effect is exactly as if the [value] were converted to a string by the `obj.toString()` method,
+ * and then that string was inserted into this string builder at the specified [index].
+ *
+ * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
+ */
+@UseExperimental(ExperimentalStdlibApi::class)
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
+public inline fun StringBuilder.insert(index: Int, value: Any?): StringBuilder = this.insert(index = index, obj = value)
+
+/**
+ *  Sets the length of this string builder to the specified length [l].
+ *
+ *  If the [l] is less than the current length, it is changed to the specified length [l].
+ *  Otherwise, null characters '\u0000' are appended to this string builder until its length is less than the [l].
+ *
+ *  Note that in Kotlin/JS [set] operator function has non-constant execution time complexity.
+ *  Therefore, increasing length of this string builder and then updating each character by index may slow down your program.
+ *
+ *  @throws IndexOutOfBoundsException or [IllegalArgumentException] if [l] is less than zero.
+ */
+@UseExperimental(ExperimentalStdlibApi::class)
+@Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
+public inline fun StringBuilder.setLength(l: Int) = this.setLength(newLength = l)
+
+/**
+ * Sets the character at the specified [index] to the specified [value].
+ *
+ * @throws IndexOutOfBoundsException if [index] is out of bounds of this string builder.
+ */
+@UseExperimental(ExperimentalStdlibApi::class)
+public inline fun StringBuilder.setCharAt(index: Int, value: Char) = this.set(index, value)
+
+/**
+ * Removes the character at the specified [index] from this string builder and returns this instance.
+ *
+ * If the `Char` at the specified [index] is part of a supplementary code point, this method does not remove the entire supplementary character.
+ *
+ * @param index the index of `Char` to remove.
+ *
+ * @throws IndexOutOfBoundsException if [index] is out of bounds of this string builder.
+ */
+@UseExperimental(ExperimentalStdlibApi::class)
+public inline fun StringBuilder.deleteCharAt(index: Int) = this.deleteAt(index)
