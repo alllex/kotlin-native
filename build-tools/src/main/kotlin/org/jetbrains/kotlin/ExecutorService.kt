@@ -463,11 +463,6 @@ private fun deviceLauncher(project: Project) = object : ExecutorService {
     }
 }
 
-fun prepareLauncher(project: Project): Copy = project.tasks.create("prepareLauncher", Copy::class.java).apply {
-    from(project.file("iosLauncher"))
-    into(Paths.get(project.testOutputRoot, "launcher"))
-}
-
 fun KonanTestExecutable.xcodeBuild() {
     this.doBeforeRun = Action {
         val signIdentity = project.findProperty("sign_identity") as? String ?: "iPhone Developer"
@@ -501,6 +496,9 @@ fun KonanTestExecutable.xcodeBuild() {
                     }
                 }.joinToString(separator = "\\n") { it.replace("\"", "\\\"") }
 
+        // Copy template xcode project.
+        project.file("iosLauncher").copyRecursively(xcProject.toFile(), overwrite = true)
+
         xcProject.resolve("KonanTestLauncher.xcodeproj/project.pbxproj")
                 .toFile()
                 .apply {
@@ -527,7 +525,6 @@ fun KonanTestExecutable.xcodeBuild() {
                     .toFile()
                     .takeIf { f -> f.exists() }
                     ?.let { file -> project.file("$executable.dSYM").copyRecursively(file, true) }
-
         }
         val sdk = when (project.testTarget) {
             KonanTarget.IOS_ARM32, KonanTarget.IOS_ARM64 -> Xcode.current.iphoneosSdk

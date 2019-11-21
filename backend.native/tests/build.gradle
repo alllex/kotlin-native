@@ -4008,11 +4008,9 @@ task buildKonanTests { t ->
 }
 
 if (PlatformInfo.getTarget(project) == KonanTarget.IOS_ARM64.INSTANCE) {
-    def prepare = ExecutorServiceKt.prepareLauncher(project)
     project.tasks
             .matching { it instanceof KonanTestExecutable }
             .forEach {
-                it.dependsOn(prepare)
                 ExecutorServiceKt.xcodeBuild((KonanTestExecutable) it)
             }
     // Exclude tasks that can not be run on device
