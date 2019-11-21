@@ -21,7 +21,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.gradle.api.Action
 import org.gradle.api.Project
-import org.gradle.api.tasks.Copy
 import org.gradle.process.ExecResult
 import org.gradle.process.ExecSpec
 import org.gradle.util.ConfigureUtil
@@ -470,23 +469,23 @@ fun KonanTestExecutable.xcodeBuild() {
         val xcProject = Paths.get(project.testOutputRoot, "launcher")
 
         val shellScript: String = // language=Bash
-                mutableListOf("cp \"\$PROJECT_DIR/KonanTestLauncher/build/\$TARGET_NAME.kexe\" " +
-                        "\"\$TARGET_BUILD_DIR/\$EXECUTABLE_PATH\"").also {
-                    // copy dSYM if it exists
-                    it += """
+                mutableListOf("""
+                        # Copy executable to the build dir.
+                        cp "${"$"}PROJECT_DIR/KonanTestLauncher/build/${"$"}TARGET_NAME.kexe" \
+                            "${"$"}TARGET_BUILD_DIR/${"$"}EXECUTABLE_PATH"
+                        # copy dSYM if it exists
                         DSYM_DIR="${"$"}PROJECT_DIR/KonanTestLauncher/build/${"$"}TARGET_NAME.kexe.dSYM"
                         if [ -d "${"$"}DSYM_DIR" ]; then
                             cp -r "${"$"}DSYM_DIR" "${"$"}TARGET_BUILD_DIR/${"$"}EXECUTABLE_FOLDER_PATH/"
                         fi
-                    """.trimIndent()
+                    """.trimIndent()).also {
                     when (this) {
                         is FrameworkTest -> {
-                            val frameworkParentDirPath = "$testOutput/$testName/${project.testTarget.name}"
                             // Create a Frameworks folder inside the build dir.
                             it += "mkdir -p \"\$TARGET_BUILD_DIR/\$FRAMEWORKS_FOLDER_PATH\""
                             // Copy each framework to the Frameworks dir.
                             it += frameworkNames.map { name ->
-                                "cp -r \"$frameworkParentDirPath/$name.framework\" " +
+                                "cp -r \"$testOutput/$testName/${project.testTarget.name}/$name.framework\" " +
                                         "\"\$TARGET_BUILD_DIR/\$FRAMEWORKS_FOLDER_PATH/$name.framework\""
                             }
                             // Add @rpath to the built executable to point to Frameworks directory
