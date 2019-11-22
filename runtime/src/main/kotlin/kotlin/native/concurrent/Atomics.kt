@@ -7,6 +7,7 @@ package kotlin.native.concurrent
 
 import kotlin.native.internal.ExportTypeInfo
 import kotlin.native.internal.Frozen
+import kotlin.native.internal.LeakDetectorCandidate
 import kotlin.native.internal.NoReorderFields
 import kotlin.native.SymbolName
 import kotlinx.cinterop.NativePtr
@@ -210,6 +211,7 @@ public class AtomicNativePtr(private var value_: NativePtr) {
  * once no longer needed. Otherwise memory leak could happen.
  */
 @Frozen
+@LeakDetectorCandidate
 @NoReorderFields
 public class AtomicReference<T>(private var value_: T) {
     // A spinlock to fix potential ARC race.
@@ -280,6 +282,7 @@ public class AtomicReference<T>(private var value_: T) {
  * otherwise behaves as regular box for the value.
  */
 @NoReorderFields
+@LeakDetectorCandidate
 @ExportTypeInfo("theFreezableAtomicReferenceTypeInfo")
 public class FreezableAtomicReference<T>(private var value_: T) {
     // A spinlock to fix potential ARC race.

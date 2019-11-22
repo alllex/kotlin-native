@@ -315,10 +315,20 @@ ALWAYS_INLINE bool hasPointerBits(T* ptr, unsigned bits) {
 struct MetaObjHeader {
   // Pointer to the type info. Must be first, to match ArrayHeader and ObjHeader layout.
   const TypeInfo* typeInfo_;
-  // Strong reference to the counter object.
-  ObjHeader* counter_;
   // Container pointer.
   ContainerHeader* container_;
+  union {
+    struct {
+      // Strong reference to the counter object.
+      ObjHeader* counter_;
+    } WeakReference;
+    struct {
+      // Leak detector's previous list element.
+      ObjHeader* previous_;
+      // Leak detector's next list element.
+      ObjHeader* next_;
+    } LeakDetector;
+  } u;
 #ifdef KONAN_OBJC_INTEROP
   void* associatedObject_;
 #endif
