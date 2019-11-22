@@ -35,7 +35,7 @@
 // http://researcher.watson.ibm.com/researcher/files/us-bacon/Bacon03Pure.pdf.
 #define USE_GC 1
 // Define to 1 to print all memory operations.
-#define TRACE_MEMORY 0
+#define TRACE_MEMORY 1
 // Define to 1 to print major GC events.
 #define TRACE_GC 0
 // Collect memory manager events statistics.
@@ -903,11 +903,13 @@ void freeAggregatingFrozenContainer(ContainerHeader* container) {
 
 void runDeallocationHooks(ContainerHeader* container) {
   ObjHeader* obj = reinterpret_cast<ObjHeader*>(container + 1);
-
+  konan::consolePrintf("runDeallocationHooks on %p\n", obj);
   for (int index = 0; index < container->objectCount(); index++) {
+    konan::consolePrintf("check %p: %p\n", obj, obj->typeInfoOrMeta_);
     if (obj->has_meta_object()) {
       ObjHeader::destroyMetaObject(&obj->typeInfoOrMeta_);
     }
+ #if 0
     if (KonanNeedDebugInfo && g_checkLeaks && (obj->type_info()->flags_ & TF_LEAK_CHECKER) != 0) {
       // Remove the object from the double-linked list of potentially cyclic objects.
       auto* meta = obj->meta_object();
@@ -927,7 +929,7 @@ void runDeallocationHooks(ContainerHeader* container) {
       }
       unlock(&g_leakCheckerGlobalLock);
    }
-
+#endif
     obj = reinterpret_cast<ObjHeader*>(
       reinterpret_cast<uintptr_t>(obj) + objectSize(obj));
   }
@@ -2617,6 +2619,8 @@ MetaObjHeader* ObjHeader::createMetaObject(TypeInfo** location) {
 
 void ObjHeader::destroyMetaObject(TypeInfo** location) {
   MetaObjHeader* meta = clearPointerBits(*(reinterpret_cast<MetaObjHeader**>(location)), OBJECT_TAG_MASK);
+  konan::consolePrintf("destroyMetaObject on %p: %p\n", location, meta);
+  if (meta == nullptr) return;
   *const_cast<const TypeInfo**>(location) = meta->typeInfo_;
   if (meta->u.WeakReference.counter_ != nullptr) {
     WeakReferenceCounterClear(meta->u.WeakReference.counter_);
