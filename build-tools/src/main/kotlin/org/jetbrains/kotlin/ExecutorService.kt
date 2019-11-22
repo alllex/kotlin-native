@@ -471,8 +471,8 @@ fun KonanTestExecutable.xcodeBuild() {
         val shellScript: String = // language=Bash
                 mutableListOf("""
                         # Copy executable to the build dir.
-                        cp "${"$"}PROJECT_DIR/KonanTestLauncher/build/${"$"}TARGET_NAME.kexe" \
-                        "${"$"}TARGET_BUILD_DIR/${"$"}EXECUTABLE_PATH"
+                        BUILD_DIR="${"$"}TARGET_BUILD_DIR/${"$"}EXECUTABLE_PATH"
+                        cp "${"$"}PROJECT_DIR/KonanTestLauncher/build/${"$"}TARGET_NAME.kexe" "${"$"}BUILD_DIR"  
                         # copy dSYM if it exists
                         DSYM_DIR="${"$"}PROJECT_DIR/KonanTestLauncher/build/${"$"}TARGET_NAME.kexe.dSYM"
                         if [ -d "${"$"}DSYM_DIR" ]; then
