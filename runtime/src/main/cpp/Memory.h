@@ -413,16 +413,16 @@ extern "C" {
    returnType name(__VA_ARGS__) RUNTIME_NOTHROW;         \
    returnType name##Strict(__VA_ARGS__) RUNTIME_NOTHROW; \
    returnType name##Relaxed(__VA_ARGS__) RUNTIME_NOTHROW;
-#define RETURN_OBJ(value) { ObjHeader* obj = value; \
-    UpdateReturnRef(OBJ_RESULT, obj);               \
-    return obj; }
+#define RETURN_OBJ(value) { ObjHeader* __obj = value; \
+    UpdateReturnRef(OBJ_RESULT, __obj);               \
+    return __obj; }
 #define RETURN_RESULT_OF0(name) {       \
-    ObjHeader* obj = name(OBJ_RESULT);  \
-    return obj;                         \
+    ObjHeader* __obj = name(OBJ_RESULT);  \
+    return __obj;                         \
   }
 #define RETURN_RESULT_OF(name, ...) {                   \
-    ObjHeader* result = name(__VA_ARGS__, OBJ_RESULT);  \
-    return result;                                      \
+    ObjHeader* __result = name(__VA_ARGS__, OBJ_RESULT);  \
+    return __result;                                      \
   }
 
 struct MemoryState;
