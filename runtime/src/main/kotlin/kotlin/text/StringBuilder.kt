@@ -400,8 +400,6 @@ actual class StringBuilder private constructor (
      *
      * @throws IndexOutOfBoundsException if [index] is out of bounds of this string builder.
      */
-    @SinceKotlin("1.3")
-    @ExperimentalStdlibApi
     operator fun set(index: Int, value: Char) {
         checkIndex(index)
         array[index] = value
@@ -632,7 +630,6 @@ public actual fun StringBuilder.clear(): StringBuilder = apply { setLength(0) }
  *
  * @throws IndexOutOfBoundsException if [index] is out of bounds of this string builder.
  */
-@UseExperimental(ExperimentalStdlibApi::class)
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 @kotlin.internal.InlineOnly
 public actual inline operator fun StringBuilder.set(index: Int, value: Char): Unit = this.set(index, value)
@@ -775,14 +772,12 @@ public actual inline fun StringBuilder.insertRange(index: Int, csq: CharSequence
  * The overall effect is exactly as if the boolean [it] were converted to a string by the `boolean.toString()` method,
  * and then that string was appended to this string builder.
  */
-@UseExperimental(ExperimentalStdlibApi::class)
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public inline fun StringBuilder.append(it: Boolean): StringBuilder = this.append(boolean = it)
 
 /**
  * Appends the specified string [it] to this string builder and returns this instance.
  */
-@UseExperimental(ExperimentalStdlibApi::class)
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public inline fun StringBuilder.append(it: String): StringBuilder = this.append(string = it)
 
@@ -791,7 +786,6 @@ public inline fun StringBuilder.append(it: String): StringBuilder = this.append(
  *
  * Characters are appended in order, starting at the index 0.
  */
-@UseExperimental(ExperimentalStdlibApi::class)
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public inline fun StringBuilder.append(it: CharArray): StringBuilder = this.append(chars = it)
 
@@ -801,7 +795,6 @@ public inline fun StringBuilder.append(it: CharArray): StringBuilder = this.appe
  * If the current capacity is less than the specified [capacity], a new backing storage is allocated with greater capacity.
  * Otherwise, this method takes no action and simply returns.
  */
-@UseExperimental(ExperimentalStdlibApi::class)
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public inline fun StringBuilder.ensureCapacity(capacity: Int): Unit = this.ensureCapacity(minimumCapacity = capacity)
 
@@ -810,7 +803,6 @@ public inline fun StringBuilder.ensureCapacity(capacity: Int): Unit = this.ensur
  *
  * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
  */
-@UseExperimental(ExperimentalStdlibApi::class)
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public inline fun StringBuilder.insert(index: Int, c: Char): StringBuilder = this.insert(index = index, char = c)
 
@@ -822,7 +814,6 @@ public inline fun StringBuilder.insert(index: Int, c: Char): StringBuilder = thi
  *
  * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
  */
-@UseExperimental(ExperimentalStdlibApi::class)
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public inline fun StringBuilder.insert(index: Int, value: Boolean): StringBuilder = this.insert(index = index, boolean = value)
 
@@ -852,7 +843,6 @@ public inline fun StringBuilder.insert(index: Int, csq: CharSequence?, start: In
  *
  * @throws IndexOutOfBoundsException if [index] is less than zero or greater than the length of this string builder.
  */
-@UseExperimental(ExperimentalStdlibApi::class)
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public inline fun StringBuilder.insert(index: Int, value: Any?): StringBuilder = this.insert(index = index, obj = value)
 
@@ -867,7 +857,6 @@ public inline fun StringBuilder.insert(index: Int, value: Any?): StringBuilder =
  *
  *  @throws IndexOutOfBoundsException or [IllegalArgumentException] if [l] is less than zero.
  */
-@UseExperimental(ExperimentalStdlibApi::class)
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "NOTHING_TO_INLINE")
 public inline fun StringBuilder.setLength(l: Int) = this.setLength(newLength = l)
 
